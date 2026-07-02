@@ -102,4 +102,4 @@ The skill is intentionally conservative:
 
 ## License
 
-No license has been specified yet. Add a license before distributing this repository publicly.
+MIT License. See `LICENSE`.
