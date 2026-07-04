@@ -10,6 +10,8 @@ $ClaudeSkills = Join-Path $env:USERPROFILE '.claude\skills'
 $ClaudePluginCache = Join-Path $env:USERPROFILE '.claude\plugins\cache'
 $ClaudeMarketplaces = Join-Path $env:USERPROFILE '.claude\plugins\marketplaces'
 $CodexPluginCache = Join-Path $env:USERPROFILE '.codex\plugins\cache'
+$CodexConfig = Join-Path $env:USERPROFILE '.codex\config.toml'
+$ClaudeUserConfig = Join-Path $env:USERPROFILE '.claude.json'
 $AiExtensions = if ($env:AI_EXTENSIONS_HOME) {
   $env:AI_EXTENSIONS_HOME
 } else {
@@ -23,12 +25,19 @@ $AiExtensions = if ($env:AI_EXTENSIONS_HOME) {
 cmd /c npx --yes skills list -g --json
 cmd /c claude plugin list --json
 cmd /c claude plugin marketplace list --json
+cmd /c claude mcp list
+cmd /c codex mcp list
 Get-Content -LiteralPath "$env:USERPROFILE\.agents\.skill-lock.json" -Raw
 Get-ChildItem -LiteralPath $AgentsSkills -Directory
 Get-ChildItem -LiteralPath $ClaudeSkills -Directory
 Get-ChildItem -LiteralPath $ClaudePluginCache -Directory
 Get-ChildItem -LiteralPath $CodexPluginCache -Directory
+Test-Path -LiteralPath $CodexConfig
+Test-Path -LiteralPath $ClaudeUserConfig
+Get-ChildItem -LiteralPath (Get-Location) -Filter '.mcp.json' -Force
 ```
+
+Do not print config files that may contain secrets. When inspection is needed, extract only server names, scopes, commands, URLs, and environment variable names, and redact values.
 
 ## Install Shared Skills
 
@@ -84,6 +93,70 @@ cmd /c claude plugin uninstall <plugin>@<marketplace> -s user -y
 
 Confirm the exact CLI syntax with `claude plugin --help` before destructive operations.
 
+## MCP Commands
+
+Claude Code MCP inventory and help:
+
+```powershell
+cmd /c claude mcp list
+cmd /c claude mcp --help
+cmd /c claude mcp add --help
+cmd /c claude mcp remove --help
+```
+
+Claude Code supports local, project, and user scopes. Prefer user/global scope for shared personal servers, project scope for team-shared `.mcp.json`, and local scope for private project-only credentials.
+
+Codex MCP inventory and help:
+
+```powershell
+cmd /c codex mcp list
+cmd /c codex mcp --help
+cmd /c codex mcp add --help
+cmd /c codex mcp remove --help
+```
+
+Codex CLI and IDE read MCP configuration from `~\.codex\config.toml`. Some Codex entries can be imported from Claude Code configuration; record that source before changing either side.
+
+Common carrier update checks:
+
+```powershell
+# npm/npx carrier
+cmd /c npm view <package-name> version
+cmd /c npm outdated -g
+
+# uv/uvx or Python carrier
+cmd /c uv tool list
+cmd /c pip list --outdated
+
+# Docker carrier
+cmd /c docker image ls
+cmd /c docker pull <image>:<tag>
+
+# Git/local executable carrier
+git -C '<repo-path>' remote -v
+git -C '<repo-path>' status --porcelain
+git -C '<repo-path>' fetch --all --prune
+```
+
+Use these as diagnostics before mutation. Update only the package, image, lock file, or repository that owns the MCP command.
+
+## Codex Apps Or Connectors
+
+Codex Apps/connectors are connector-managed capabilities that expose tools through MCP-like app tooling. They are not normal skill folders.
+
+Recommended checks:
+
+```powershell
+# Generated Codex Apps cache roots often involved in discovery/runtime issues.
+$CodexCache = Join-Path $env:USERPROFILE '.codex\cache'
+Get-ChildItem -LiteralPath $CodexCache -Directory | Where-Object {
+  $_.Name -like 'codex_apps_*' -or $_.Name -eq 'remote_plugin_catalog'
+}
+Get-ChildItem -LiteralPath $CodexPluginCache -Directory
+```
+
+Before clearing generated connector caches, back up the affected directories and verify the target path is under `$env:USERPROFILE\.codex\cache` or `$CodexPluginCache`.
+
 ## Hash Verification
 
 ```powershell
@@ -129,10 +202,15 @@ git -C '<marketplace-repo>' status --porcelain
 
 Full status report:
 
-| Side | Type | Name | Version/Hash | Enabled | Path | Source | Updateability | Status |
-|---|---|---|---|---|---|---|---|---|
+| Side | Type | Name | Scope | Version/Hash | Enabled | Path/Config | Source/Carrier | Updateability | Status |
+|---|---|---|---|---|---|---|---|---|---|
 
 Update report:
 
-| Side | Name | Before | After | Latest | Verification |
-|---|---|---|---|---|---|
+| Side | Type | Name | Before | After | Latest | Verification |
+|---|---|---|---|---|---|---|
+
+MCP status report:
+
+| Side | Name | Scope | Transport | Command/URL | Source | Carrier | Imported From | Updateability | Verification |
+|---|---|---|---|---|---|---|---|---|---|

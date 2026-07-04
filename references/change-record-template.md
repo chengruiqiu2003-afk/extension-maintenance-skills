@@ -39,7 +39,10 @@
 
 - `npx --yes skills list -g --json`:
 - `claude plugin list --json`:
+- `claude mcp list`:
+- `codex mcp list`:
 - Hash comparison:
+- MCP/tool probe:
 - Cache existence checks:
 - Git/marketplace status:
 
